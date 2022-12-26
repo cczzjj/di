@@ -9,30 +9,18 @@ namespace DI;
  */
 class PropertyInjection
 {
-    private string $propertyName;
-
-    /**
-     * Name of the target entry
-     */
-    private string $targetEntryName;
-
-    /**
-     * Use for injecting in properties of parent classes: the class name
-     * must be the name of the parent class because private properties
-     * can be attached to the parent classes, not the one we are resolving.
-     */
-    private ?string $className;
-
     /**
      * @param string $propertyName Property name
-     * @param string $targetEntryName Value that should be injected in the property
-     * @param string|null $className
+     * @param string $targetEntryName Name of the target entry
+     * @param string|null $className Use for injecting in properties of parent classes: the class name
+     *                               must be the name of the parent class because private properties
+     *                               can be attached to the parent classes, not the one we are resolving.
      */
-    public function __construct(string $propertyName, string $targetEntryName, string $className = null)
-    {
-        $this->propertyName = $propertyName;
-        $this->targetEntryName = $targetEntryName;
-        $this->className = $className;
+    public function __construct(
+        private string  $propertyName,
+        private string  $targetEntryName,
+        private ?string $className = null
+    ) {
     }
 
     public function getPropertyName(): string

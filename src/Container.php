@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace DI;
 
 use DI\Exception\DependencyException;
-use DI\Exception\InvalidAttributeException;
-use DI\Exception\InvalidDefinitionException;
 use DI\Exception\NotFoundException;
-use InvalidArgumentException;
 use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
 
 class Container implements ContainerInterface
 {
@@ -46,13 +42,9 @@ class Container implements ContainerInterface
      * Returns an entry of the container by its name.
      *
      * @param string $id Entry name or a class name.
-     *
      * @return mixed
      * @throws DependencyException Error while resolving the entry.
-     * @throws InvalidAttributeException
-     * @throws InvalidDefinitionException
      * @throws NotFoundException No entry found for the given name.
-     * @throws \ReflectionException
      */
     public function get(string $id): mixed
     {
@@ -73,10 +65,6 @@ class Container implements ContainerInterface
         return $value;
     }
 
-    /**
-     * @throws InvalidAttributeException
-     * @throws \ReflectionException
-     */
     private function getDefinition(string $name): ?Definition
     {
         // Local cache that avoids fetching the same definition twice
@@ -101,11 +89,7 @@ class Container implements ContainerInterface
      *                          array will be resolved using the container.
      *
      * @throws DependencyException Error while resolving the entry.
-     * @throws InvalidArgumentException The name parameter must be of type string.
-     * @throws InvalidAttributeException
-     * @throws InvalidDefinitionException
      * @throws NotFoundException No entry found for the given name.
-     * @throws \ReflectionException
      */
     public function make(string $name, array $parameters = []): object
     {
@@ -124,9 +108,6 @@ class Container implements ContainerInterface
 
     /**
      * {@inheritDoc}
-     *
-     * @throws InvalidAttributeException
-     * @throws \ReflectionException
      */
     public function has(string $id): bool
     {
@@ -162,9 +143,6 @@ class Container implements ContainerInterface
      * @param array $parameters
      * @return mixed
      * @throws DependencyException Error while resolving the entry.
-     * @throws InvalidDefinitionException
-     * @throws NotFoundExceptionInterface
-     * @throws \ReflectionException
      */
     private function resolveDefinition(Definition $definition, array $parameters = []): mixed
     {
@@ -178,6 +156,7 @@ class Container implements ContainerInterface
 
         // Resolve the definition
         try {
+            /** @noinspection PhpUnhandledExceptionInspection */
             $value = $this->definitionResolver->resolve($definition, $parameters);
         } finally {
             unset($this->entriesBeingResolved[$entryName]);

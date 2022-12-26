@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace DI;
 
-use DI\Exception\InvalidDefinitionException;
+use DI\Exception\DefinitionException;
 use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use ReflectionProperty;
 
 /**
@@ -26,9 +25,7 @@ class DefinitionResolver
      * @param Definition $definition
      * @param array $parameters
      * @return mixed
-     * @throws InvalidDefinitionException
-     * @throws NotFoundExceptionInterface
-     * @throws \ReflectionException
+     * @throws DefinitionException Class does not exist or is not instantiable
      */
     public function resolve(Definition $definition, array $parameters = []): mixed
     {
@@ -40,10 +37,9 @@ class DefinitionResolver
      * or if the class doesn't exist.
      *
      * @param Definition $definition
-     * @param array $parameters
      * @return bool
      */
-    public function isResolvable(Definition $definition, array $parameters = []): bool
+    public function isResolvable(Definition $definition): bool
     {
         return $definition->isInstantiable();
     }
@@ -54,9 +50,7 @@ class DefinitionResolver
      * @param Definition $definition
      * @param array $parameters Optional parameters to use to create the instance.
      * @return mixed
-     * @throws InvalidDefinitionException
-     * @throws NotFoundExceptionInterface
-     * @throws \ReflectionException
+     * @throws DefinitionException Class does not exist or is not instantiable
      */
     private function createInstance(Definition $definition, array $parameters): mixed
     {
@@ -64,19 +58,18 @@ class DefinitionResolver
         if (!$definition->isInstantiable()) {
             // Check that the class exists
             if (!$definition->classExists()) {
-                throw new InvalidDefinitionException(sprintf(
+                throw new DefinitionException(sprintf(
                     'Entry "%s" cannot be resolved: the class doesn\'t exist',
                     $definition->getName()
                 ));
             }
 
-            throw new InvalidDefinitionException(sprintf(
+            throw new DefinitionException(sprintf(
                 'Entry "%s" cannot be resolved: the class is not instantiable',
                 $definition->getName()
             ));
         }
 
-        /** @psalm-var class-string $classname */
         $classname = $definition->getClassName();
 
         $object = new $classname(...$parameters);
@@ -86,16 +79,8 @@ class DefinitionResolver
         return $object;
     }
 
-    /**
-     * @param object $object
-     * @param Definition $objectDefinition
-     *
-     * @throws NotFoundExceptionInterface
-     * @throws \ReflectionException
-     */
     protected function injectProperties(object $object, Definition $objectDefinition): void
     {
-        // Property injections
         foreach ($objectDefinition->getPropertyInjections() as $propertyInjection) {
             $this->injectProperty($object, $propertyInjection);
         }
@@ -106,9 +91,6 @@ class DefinitionResolver
      *
      * @param object $object Object to inject dependencies into
      * @param PropertyInjection $propertyInjection Property injection definition
-     *
-     * @throws NotFoundExceptionInterface
-     * @throws \ReflectionException
      */
     private function injectProperty(object $object, PropertyInjection $propertyInjection): void
     {
@@ -116,18 +98,17 @@ class DefinitionResolver
 
         $entryName = $propertyInjection->getTargetEntryName();
 
+        /** @noinspection PhpUnhandledExceptionInspection */
         $value = $this->container->get($entryName);
 
         self::setPrivatePropertyValue($propertyInjection->getClassName(), $object, $propertyName, $value);
     }
 
-    /**
-     * @throws \ReflectionException
-     */
-    public static function setPrivatePropertyValue(?string $className, $object, string $propertyName, object $propertyValue): void
+    public static function setPrivatePropertyValue(?string $className, object $object, string $propertyName, object $propertyValue): void
     {
         $className = $className ?: get_class($object);
 
+        /** @noinspection PhpUnhandledExceptionInspection */
         $property = new ReflectionProperty($className, $propertyName);
         if (!$property->isPublic()) {
             $property->setAccessible(true);

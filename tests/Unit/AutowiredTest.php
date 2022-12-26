@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use DI\Container;
-use DI\Exception\InvalidAttributeException;
+use DI\Exception\AttributeException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Tests\Unit\Entity\Entity2;
@@ -35,7 +35,7 @@ class AutowiredTest extends TestCase
 
     public function testProperty2()
     {
-        $this->expectException(InvalidAttributeException::class);
+        $this->expectException(AttributeException::class);
 
         $this->container->get(Entity1::class);
         /** @var Entity3 $entity3 */

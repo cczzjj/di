@@ -40,8 +40,6 @@ class Definition
     /**
      * @param string $name Entry name
      * @param string|null $className Class name
-     *
-     * @throws \ReflectionException
      */
     public function __construct(string $name, string $className = null)
     {
@@ -59,9 +57,6 @@ class Definition
         $this->name = $name;
     }
 
-    /**
-     * @throws \ReflectionException
-     */
     public function setClassName(?string $className): void
     {
         $this->className = $className;
@@ -106,9 +101,6 @@ class Definition
         return $this->isInstantiable;
     }
 
-    /**
-     * @throws \ReflectionException
-     */
     private function updateCache(): void
     {
         $className = $this->getClassName();
@@ -121,7 +113,7 @@ class Definition
             return;
         }
 
-        /** @var class-string $className */
+        /** @noinspection PhpUnhandledExceptionInspection */
         $class = new ReflectionClass($className);
         $this->isInstantiable = $class->isInstantiable();
     }
