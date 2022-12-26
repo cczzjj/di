@@ -35,7 +35,12 @@ class Container implements ContainerInterface
     {
         $this->definitionSource = new DefinitionSource();
         $this->definitionResolver = new DefinitionResolver($this);
-        $this->resolvedEntries = [];
+
+        // Auto-register the container
+        $this->resolvedEntries = [
+            self::class => $this,
+            ContainerInterface::class => $this,
+        ];
     }
 
     /**
