@@ -3,6 +3,7 @@
     "type": "library",
     "keywords": ["di", "dependency injection", "attributes", "container", "ioc", "psr-11", "psr11"],
     "license": "MIT",
+    "description": "Simple Dependencies Container following PSR-11 standards, using php8 Attributes like Spring.",
     "autoload": {
         "psr-4": {
             "DI\\": "src/"
