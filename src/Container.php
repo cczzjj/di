@@ -107,7 +107,7 @@ class Container implements ContainerInterface
         $definition = $this->getDefinition($name);
         if (!$definition) {
             // If the entry is already resolved we return it
-            if (array_key_exists($name, $this->resolvedEntries)) {
+            if (isset($this->resolvedEntries[$name]) || array_key_exists($name, $this->resolvedEntries)) {
                 return $this->resolvedEntries[$name];
             }
 
@@ -128,7 +128,7 @@ class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
-        return array_key_exists($id, $this->resolvedEntries);
+        return isset($this->resolvedEntries[$id]) || array_key_exists($id, $this->resolvedEntries);
     }
 
     /**
