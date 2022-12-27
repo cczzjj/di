@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace DI;
 
-use DI\Exception\DefinitionException;
 use Psr\Container\ContainerInterface;
 use ReflectionProperty;
 
 /**
- * Create objects based on a definition.
+ * Update object based on definition.
  */
 class DefinitionResolver
 {
@@ -18,68 +17,18 @@ class DefinitionResolver
     }
 
     /**
-     * Resolve a class definition to a value.
+     * Resolve a class definition.
      *
-     * This will create a new instance of the class using the injections points defined.
-     *
+     * @param mixed $object
      * @param Definition $definition
-     * @param array $parameters
-     * @return mixed
-     * @throws DefinitionException Class does not exist or is not instantiable
+     * @return void
      */
-    public function resolve(Definition $definition, array $parameters = []): mixed
+    public function resolve(mixed $object, Definition $definition): void
     {
-        return $this->createInstance($definition, $parameters);
-    }
-
-    /**
-     * The definition is not resolvable if the class is not instantiable (interface or abstract)
-     * or if the class doesn't exist.
-     *
-     * @param Definition $definition
-     * @return bool
-     */
-    public function isResolvable(Definition $definition): bool
-    {
-        return $definition->isInstantiable();
-    }
-
-    /**
-     * Creates an instance of the class and injects dependencies..
-     *
-     * @param Definition $definition
-     * @param array $parameters Optional parameters to use to create the instance.
-     * @return mixed
-     * @throws DefinitionException Class does not exist or is not instantiable
-     */
-    private function createInstance(Definition $definition, array $parameters): mixed
-    {
-        // Check that the class is instantiable
-        if (!$definition->isInstantiable()) {
-            // Check that the class exists
-            if (!$definition->classExists()) {
-                throw new DefinitionException(sprintf(
-                    'Entry "%s" cannot be resolved: the class doesn\'t exist',
-                    $definition->getName()
-                ));
-            }
-
-            throw new DefinitionException(sprintf(
-                'Entry "%s" cannot be resolved: the class is not instantiable',
-                $definition->getName()
-            ));
-        }
-
-        $classname = $definition->getClassName();
-
-        $object = new $classname(...$parameters);
-
         $this->injectProperties($object, $definition);
-
-        return $object;
     }
 
-    protected function injectProperties(object $object, Definition $objectDefinition): void
+    protected function injectProperties(mixed $object, Definition $objectDefinition): void
     {
         foreach ($objectDefinition->getPropertyInjections() as $propertyInjection) {
             $this->injectProperty($object, $propertyInjection);
@@ -89,10 +38,10 @@ class DefinitionResolver
     /**
      * Inject dependencies into properties.
      *
-     * @param object $object Object to inject dependencies into
+     * @param mixed $object Object to inject dependencies into
      * @param PropertyInjection $propertyInjection Property injection definition
      */
-    private function injectProperty(object $object, PropertyInjection $propertyInjection): void
+    private function injectProperty(mixed $object, PropertyInjection $propertyInjection): void
     {
         $propertyName = $propertyInjection->getPropertyName();
 
@@ -104,7 +53,7 @@ class DefinitionResolver
         self::setPrivatePropertyValue($propertyInjection->getClassName(), $object, $propertyName, $value);
     }
 
-    public static function setPrivatePropertyValue(?string $className, object $object, string $propertyName, object $propertyValue): void
+    public static function setPrivatePropertyValue(?string $className, mixed $object, string $propertyName, object $propertyValue): void
     {
         $className = $className ?: get_class($object);
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace DI;
 
-use DI\Exception\DependencyException;
+use DI\Exception\DefinitionException;
 use DI\Exception\NotFoundException;
 use Psr\Container\ContainerInterface;
 
@@ -12,8 +12,17 @@ class Container implements ContainerInterface
 {
     /**
      * Map of entries that are already resolved.
+     *
+     * @var array<string, mixed>
      */
     protected array $resolvedEntries = [];
+
+    /**
+     * Map of entries that are not fully resolved (L2 cache).
+     *
+     * @var array<string, mixed>
+     */
+    private array $earlyResolvedEntries = [];
 
     private DefinitionSource $definitionSource;
 
@@ -22,14 +31,9 @@ class Container implements ContainerInterface
     /**
      * Map of definitions that are already fetched (local cache).
      *
-     * @var array<Definition|null>
+     * @var array<string, Definition|null>
      */
     private array $fetchedDefinitions = [];
-
-    /**
-     * Array of entries being resolved. Used to avoid circular dependencies and infinite loops.
-     */
-    protected array $entriesBeingResolved = [];
 
     public function __construct()
     {
@@ -44,11 +48,11 @@ class Container implements ContainerInterface
     }
 
     /**
-     * Returns an entry of the container by its name.
+     * Return an entry from the container by its name.
      *
      * @param string $id Entry name or a class name.
      * @return mixed
-     * @throws DependencyException Error while resolving the entry.
+     * @throws DefinitionException Class does not exist or is not instantiable.
      * @throws NotFoundException No entry found for the given name.
      */
     public function get(string $id): mixed
@@ -63,11 +67,13 @@ class Container implements ContainerInterface
             throw new NotFoundException("No entry or class found for '$id'");
         }
 
-        $value = $this->resolveDefinition($definition);
+        if (isset($this->earlyResolvedEntries[$id]) || array_key_exists($id, $this->earlyResolvedEntries)) {
+            return $this->earlyResolvedEntries[$id];
+        } else {
+            $this->createEarlyInstance($definition);
+        }
 
-        $this->resolvedEntries[$id] = $value;
-
-        return $value;
+        return $this->resolveDefinition($definition);
     }
 
     private function getDefinition(string $name): ?Definition
@@ -93,7 +99,7 @@ class Container implements ContainerInterface
      *                          specific parameters to specific values. Parameters not defined in this
      *                          array will be resolved using the container.
      *
-     * @throws DependencyException Error while resolving the entry.
+     * @throws DefinitionException Class does not exist or is not instantiable
      * @throws NotFoundException No entry found for the given name.
      */
     public function make(string $name, array $parameters = []): object
@@ -108,7 +114,13 @@ class Container implements ContainerInterface
             throw new NotFoundException("No entry or class found for '$name'");
         }
 
-        return $this->resolveDefinition($definition, $parameters);
+        if (isset($this->earlyResolvedEntries[$name]) || array_key_exists($name, $this->earlyResolvedEntries)) {
+            return $this->earlyResolvedEntries[$name];
+        } else {
+            $this->createEarlyInstance($definition, $parameters);
+        }
+
+        return $this->resolveDefinition($definition);
     }
 
     /**
@@ -116,16 +128,7 @@ class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
-        if (array_key_exists($id, $this->resolvedEntries)) {
-            return true;
-        }
-
-        $definition = $this->getDefinition($id);
-        if ($definition === null) {
-            return false;
-        }
-
-        return $this->definitionResolver->isResolvable($definition);
+        return array_key_exists($id, $this->resolvedEntries);
     }
 
     /**
@@ -140,33 +143,49 @@ class Container implements ContainerInterface
     }
 
     /**
-     * Resolves a definition.
+     * Create a not fully resolved entry.
      *
-     * Checks for circular dependencies while resolving the definition.
+     * @throws DefinitionException Class does not exist or is not instantiable.
+     */
+    private function createEarlyInstance(Definition $definition, array $parameters = []): void
+    {
+        // Check that the class is instantiable
+        if (!$definition->isInstantiable()) {
+            // Check that the class exists
+            if (!$definition->classExists()) {
+                throw new DefinitionException(sprintf(
+                    'Entry "%s" cannot be resolved: the class doesn\'t exist',
+                    $definition->getName()
+                ));
+            }
+
+            throw new DefinitionException(sprintf(
+                'Entry "%s" cannot be resolved: the class is not instantiable',
+                $definition->getName()
+            ));
+        }
+
+        $classname = $definition->getClassName();
+
+        $this->earlyResolvedEntries[$classname] = new $classname(...$parameters);
+    }
+
+    /**
+     * Resolve a definition.
      *
      * @param Definition $definition
-     * @param array $parameters
      * @return mixed
-     * @throws DependencyException Error while resolving the entry.
      */
-    private function resolveDefinition(Definition $definition, array $parameters = []): mixed
+    private function resolveDefinition(Definition $definition): mixed
     {
         $entryName = $definition->getName();
 
-        // Check if we are already getting this entry -> circular dependency
-        if (isset($this->entriesBeingResolved[$entryName])) {
-            throw new DependencyException("Circular dependency detected while trying to resolve entry '$entryName'");
-        }
-        $this->entriesBeingResolved[$entryName] = true;
+        $earlyEntry = $this->earlyResolvedEntries[$entryName];
 
-        // Resolve the definition
-        try {
-            /** @noinspection PhpUnhandledExceptionInspection */
-            $value = $this->definitionResolver->resolve($definition, $parameters);
-        } finally {
-            unset($this->entriesBeingResolved[$entryName]);
-        }
+        $this->definitionResolver->resolve($earlyEntry, $definition);
 
-        return $value;
+        $this->resolvedEntries[$entryName] = $earlyEntry;
+
+        return $earlyEntry;
     }
 }

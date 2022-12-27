@@ -11,12 +11,18 @@ use ReflectionNamedType;
 use ReflectionProperty;
 
 /**
- * Provides DI definitions by reading PHP 8 attributes.
- *
- * This source automatically includes the reflection source.
+ * Provides DI definitions by reading PHP8 attributes.
  */
 class DefinitionSource
 {
+    /**
+     * Returns the DI definition for the entry name.
+     */
+    public function getDefinition(string $name): ?Definition
+    {
+        return $this->autowire($name);
+    }
+
     public function autowire(string $name, Definition $definition = null): Definition|null
     {
         $className = $definition ? $definition->getClassName() : $name;
@@ -34,14 +40,6 @@ class DefinitionSource
         $this->readProperties($class, $definition);
 
         return $definition;
-    }
-
-    /**
-     * Returns the DI definition for the entry name.
-     */
-    public function getDefinition(string $name): ?Definition
-    {
-        return $this->autowire($name);
     }
 
     /**
@@ -77,7 +75,7 @@ class DefinitionSource
             return;
         }
 
-        // Try using typed properties
+        // Check the type of the property
         $propertyType = $property->getType();
         if (!$propertyType instanceof ReflectionNamedType) {
             /** @noinspection PhpUnhandledExceptionInspection */

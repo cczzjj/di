@@ -19,13 +19,14 @@ class Definition
     /**
      * Class name (if null, then the class name is $name).
      */
-    protected ?string $className = null;
+    private ?string $className = null;
 
     /**
-     * Method calls.
-     * @var PropertyInjection[]
+     * Map of properties that will be injected.
+     *
+     * @var array<string, PropertyInjection>
      */
-    protected array $propertyInjections = [];
+    private array $propertyInjections = [];
 
     /**
      * Store if the class exists. Storing it (in cache) avoids recomputing this.
@@ -70,7 +71,7 @@ class Definition
     }
 
     /**
-     * @return PropertyInjection[] Property injections
+     * @return array<string, PropertyInjection> Property injections
      */
     public function getPropertyInjections(): array
     {
