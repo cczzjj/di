@@ -30,11 +30,12 @@ class ContainerTest extends TestCase
     {
         $container = new Container;
 
-        $container->make(Entity1::class, ['Jack']);
-        /** @var Entity1 $entity1 */
-        $entity1 = $container->get(Entity1::class);
+        /** @var Entity1 $jack1 */
+        $jack1 = $container->make(Entity1::class, ['Jack']);
+        $jack2 = $container->make(Entity1::class, ['Jack']);
 
-        $this->assertSame($entity1->getName(), 'Jack');
+        $this->assertNotSame($jack1, $jack2);
+        $this->assertSame($jack1->getName(), 'Jack');
     }
 
     public function testSetGet()

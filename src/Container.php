@@ -70,20 +70,10 @@ class Container implements ContainerInterface
         if (isset($this->earlyResolvedEntries[$id]) || array_key_exists($id, $this->earlyResolvedEntries)) {
             return $this->earlyResolvedEntries[$id];
         } else {
-            $this->createEarlyInstance($definition);
+            $this->createEarlyEntry($definition);
         }
 
         return $this->resolveDefinition($definition);
-    }
-
-    private function getDefinition(string $name): ?Definition
-    {
-        // Local cache that avoids fetching the same definition twice
-        if (!array_key_exists($name, $this->fetchedDefinitions)) {
-            $this->fetchedDefinitions[$name] = $this->definitionSource->getDefinition($name);
-        }
-
-        return $this->fetchedDefinitions[$name];
     }
 
     /**
@@ -114,13 +104,9 @@ class Container implements ContainerInterface
             throw new NotFoundException("No entry or class found for '$name'");
         }
 
-        if (isset($this->earlyResolvedEntries[$name]) || array_key_exists($name, $this->earlyResolvedEntries)) {
-            return $this->earlyResolvedEntries[$name];
-        } else {
-            $this->createEarlyInstance($definition, $parameters);
-        }
+        $this->createEarlyEntry($definition, $parameters);
 
-        return $this->resolveDefinition($definition);
+        return $this->resolveDefinition($definition, false);
     }
 
     /**
@@ -142,12 +128,22 @@ class Container implements ContainerInterface
         $this->resolvedEntries[$name] = $value;
     }
 
+    private function getDefinition(string $name): ?Definition
+    {
+        // Local cache that avoids fetching the same definition twice
+        if (!array_key_exists($name, $this->fetchedDefinitions)) {
+            $this->fetchedDefinitions[$name] = $this->definitionSource->getDefinition($name);
+        }
+
+        return $this->fetchedDefinitions[$name];
+    }
+
     /**
      * Create a not fully resolved entry.
      *
      * @throws DefinitionException Class does not exist or is not instantiable.
      */
-    private function createEarlyInstance(Definition $definition, array $parameters = []): void
+    private function createEarlyEntry(Definition $definition, array $parameters = []): void
     {
         // Check that the class is instantiable
         if (!$definition->isInstantiable()) {
@@ -174,9 +170,10 @@ class Container implements ContainerInterface
      * Resolve a definition.
      *
      * @param Definition $definition
+     * @param bool $isPersist
      * @return mixed
      */
-    private function resolveDefinition(Definition $definition): mixed
+    private function resolveDefinition(Definition $definition, bool $isPersist = true): mixed
     {
         $entryName = $definition->getName();
 
@@ -184,7 +181,11 @@ class Container implements ContainerInterface
 
         $this->definitionResolver->resolve($earlyEntry, $definition);
 
-        $this->resolvedEntries[$entryName] = $earlyEntry;
+        if ($isPersist) {
+            $this->resolvedEntries[$entryName] = $earlyEntry;
+        }
+
+        unset($this->earlyResolvedEntries[$entryName]);
 
         return $earlyEntry;
     }

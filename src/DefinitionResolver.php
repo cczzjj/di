@@ -8,7 +8,7 @@ use Psr\Container\ContainerInterface;
 use ReflectionProperty;
 
 /**
- * Update object based on definition.
+ * Resolves a definition to a value.
  */
 class DefinitionResolver
 {

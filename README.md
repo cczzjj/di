@@ -33,10 +33,8 @@ class Student {
     }
 }
 
-$container->make(Student::class, 'Jack');
-
 /** @var Student $student */
-$student = $container->get(Student::class);
+$student = $container->make(Student::class, 'Jack');
 
 echo $student->getName(); // Jack
 ```
